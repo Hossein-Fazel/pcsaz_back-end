@@ -39,10 +39,9 @@ def login(request):
 
         payload = {
             'user_id': user[0],
-            'is_vip' : is_vip
         }
 
         token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-        return JsonResponse({'jwt' : token, 'is_vip' : is_vip}, status=200)
+        return JsonResponse({'jwt' : token, 'message' : 'Login was successful'}, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
