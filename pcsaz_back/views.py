@@ -2,6 +2,7 @@ from django.db import connection
 from django.http import JsonResponse
 import json
 import jwt
+from pprint import pprint
 
 SECRET_KEY = 'hosseinFazeljwt'
 
@@ -21,7 +22,44 @@ def login(request):
         if not user:
             return JsonResponse({'error': 'Invalid phone number!'}, status=401)
         
-        is_vip = False
+        payload = {
+            'user_id': user[0]
+        }
+
+        token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+        return JsonResponse({'jwt' : token, 'message' : 'Login was successful'}, status=200)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+def get_personal(request):
+    if request.method == 'GET':
+        try:
+            token = request.META['HTTP_AUTHORIZATION']
+        except:
+            return JsonResponse({"error":'Jwt is required!'}, status=400)
+
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        except:
+            return JsonResponse({"error":'Invalid jwt'}, status=401)
+        
+        # get user common data
+        with connection.cursor() as cur:
+            cur.execute("SELECT first_name, last_name, referral_code, wallet_balance, client_timestamp  FROM client WHERE id = %s", [payload['user_id']])
+            colnames = [item[0] for item in cur.description]
+            result = cur.fetchone()
+            userdata = dict(zip(colnames, result))
+
+        # get user addresses
+        with connection.cursor() as cur:
+            cur.execute("SELECT id, province, remainder FROM address WHERE id = %s", [payload['user_id']])
+            colnames = ["id", "province", "remainder"]
+            result = cur.fetchall()
+            if result:
+                userdata['adresses'] = [dict(zip(colnames, item)) for item in result]
+        
+        # check is vip or not
         with connection.cursor() as cursor:
             cursor.execute(
                 '''
@@ -32,16 +70,22 @@ def login(request):
                     ) THEN 1
                     ELSE 0
                 END AS is_vip;
-                ''', [user[0]]
+                ''', [payload['user_id']]
             )
             result = cursor.fetchone()
-            is_vip = bool(result[0]) if result else False
+            userdata['is_vip'] = bool(result[0]) if result else False
 
-        payload = {
-            'user_id': user[0],
-        }
+        # get number of referred
+        query = '''
+            SELECT COUNT(*) AS number
+            FROM refer
+            WHERE referrer = %s
+        '''
+        with connection.cursor() as cursor:
+            cursor.execute(query, [payload['user_id']])
+            result = cursor.fetchone()
+            userdata['count of referred'] = result[0]
+        
+        return JsonResponse(userdata, status=200)        
 
-        token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-        return JsonResponse({'jwt' : token, 'message' : 'Login was successful'}, status=200)
-
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+    return JsonResponse({'error':'asdf'}, status=200)
