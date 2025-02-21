@@ -152,3 +152,48 @@ def get_vip_detail(request):
         
         return JsonResponse(vip_detail, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+def get_discount_detail(request):
+    if request.method == 'GET':
+        discount_detail = {}
+        try:
+            payload = validate_jwt(request)
+        except ValueError as e:
+            js = json.loads(e.__str__())
+            return JsonResponse({"error" : js['error']}, status=js['status'])
+        
+        with connection.cursor() as cur:
+            query = '''
+                WITH RECURSIVE Referrals AS (
+                    SELECT id AS referee
+                    FROM client
+                    WHERE id = %s
+                    UNION ALL
+
+                    SELECT r.referee
+                    FROM refer r JOIN Referrals rs ON r.referrer = rs.referee
+                )
+                SELECT COUNT(*) FROM Referrals;
+            '''
+
+            cur.execute(query, [payload['user_id']])
+            result = cur.fetchone()
+        discount_detail['Gift codes'] = result[0] if result else 0
+
+        with connection.cursor() as cur:
+            query = '''
+                SELECT pc.code
+                FROM private_code pc JOIN discount_code dc ON pc.code = dc.code
+                WHERE pc.id = %s AND dc.expiration_date >= CURRENT_TIMESTAMP AND dc.expiration_date < CURRENT_TIMESTAMP + INTERVAL 7 DAY;
+            '''
+
+            cur.execute(query, [payload['user_id']])
+            colnames = [item[0] for item in cur.description]
+            result = cur.fetchall()
+
+            discount_detail['discount_codes'] = [dict(zip(colnames, item)) for item in result]
+
+        return JsonResponse(discount_detail, status=200)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
