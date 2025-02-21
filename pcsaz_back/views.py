@@ -6,9 +6,19 @@ from pprint import pprint
 
 SECRET_KEY = 'hosseinFazeljwt'
 
+def validate_jwt(request):
+    token = request.META.get('HTTP_AUTHORIZATION')
+    if not token:
+        raise ValueError('{"error": "Jwt is required!", "status": 400}')
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        return payload
+    except:
+        raise ValueError('{"error": "Invalid jwt!", "status":401}')
+
 def login(request):
     if request.method == 'POST':
-        
         try:
             data = json.loads(request.body)
             phone = data.get('phone')
@@ -35,15 +45,11 @@ def login(request):
 def get_personal(request):
     if request.method == 'GET':
         try:
-            token = request.META['HTTP_AUTHORIZATION']
-        except:
-            return JsonResponse({"error":'Jwt is required!'}, status=400)
+            payload = validate_jwt(request)
+        except ValueError as e:
+            js = json.loads(e.__str__())
+            return JsonResponse({"error" : js['error']}, status=js['status'])
 
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-        except:
-            return JsonResponse({"error":'Invalid jwt'}, status=401)
-        
         # get user common data
         with connection.cursor() as cur:
             cur.execute("SELECT first_name, last_name, referral_code, wallet_balance, client_timestamp  FROM client WHERE id = %s", [payload['user_id']])
@@ -53,8 +59,8 @@ def get_personal(request):
 
         # get user addresses
         with connection.cursor() as cur:
-            cur.execute("SELECT id, province, remainder FROM address WHERE id = %s", [payload['user_id']])
-            colnames = ["id", "province", "remainder"]
+            cur.execute("SELECT province, remainder FROM address WHERE id = %s", [payload['user_id']])
+            colnames = ["province", "remainder"]
             result = cur.fetchall()
             if result:
                 userdata['adresses'] = [dict(zip(colnames, item)) for item in result]
