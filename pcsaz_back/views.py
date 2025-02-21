@@ -94,4 +94,4 @@ def get_personal(request):
         
         return JsonResponse(userdata, status=200)        
 
-    return JsonResponse({'error':'asdf'}, status=200)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
