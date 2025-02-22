@@ -2,7 +2,6 @@ from django.db import connection
 from django.http import JsonResponse
 import jwt
 import json
-from pcsaz_back.views import SECRET_KEY, validate_jwt
 
 def login(request):
     if request.method == 'POST':
@@ -23,7 +22,7 @@ def login(request):
             'user_id': user[0]
         }
 
-        token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+        token = jwt.encode(payload, 'hosseinFazeljwt', algorithm='HS256')
         return JsonResponse({'jwt' : token, 'message' : 'Login was successful'}, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -31,22 +30,18 @@ def login(request):
 
 def get_personal(request):
     if request.method == 'GET':
-        try:
-            payload = validate_jwt(request)
-        except ValueError as e:
-            js = json.loads(e.__str__())
-            return JsonResponse({"error" : js['error']}, status=js['status'])
+        user_id = request.data
 
         # get user common data
         with connection.cursor() as cur:
-            cur.execute("SELECT first_name, last_name, referral_code, wallet_balance, client_timestamp  FROM client WHERE id = %s", [payload['user_id']])
+            cur.execute("SELECT first_name, last_name, referral_code, wallet_balance, client_timestamp  FROM client WHERE id = %s", [user_id])
             colnames = [item[0] for item in cur.description]
             result = cur.fetchone()
             userdata = dict(zip(colnames, result))
 
         # get user addresses
         with connection.cursor() as cur:
-            cur.execute("SELECT province, remainder FROM address WHERE id = %s", [payload['user_id']])
+            cur.execute("SELECT province, remainder FROM address WHERE id = %s", [user_id])
             colnames = ["province", "remainder"]
             result = cur.fetchall()
             if result:
@@ -63,7 +58,7 @@ def get_personal(request):
                     ) THEN 1
                     ELSE 0
                 END AS is_vip;
-                ''', [payload['user_id']]
+                ''', [user_id]
             )
             result = cursor.fetchone()
             userdata['is_vip'] = bool(result[0]) if result else False
@@ -75,7 +70,7 @@ def get_personal(request):
             WHERE referrer = %s
         '''
         with connection.cursor() as cursor:
-            cursor.execute(query, [payload['user_id']])
+            cursor.execute(query, [user_id])
             result = cursor.fetchone()
             userdata['count of referred'] = result[0]
         
@@ -86,11 +81,7 @@ def get_personal(request):
 def get_vip_detail(request):
     if request.method == 'GET':
         vip_detail = {}
-        try:
-            payload = validate_jwt(request)
-        except ValueError as e:
-            js = json.loads(e.__str__())
-            return JsonResponse({"error" : js['error']}, status=js['status'])
+        user_id = request.data
         
         with connection.cursor() as cur:
             query = '''
@@ -103,7 +94,7 @@ def get_vip_detail(request):
                 WHERE id = %s 
                 AND Subscription_expiration_time > CURRENT_TIMESTAMP;
             '''
-            cur.execute(query, [payload['user_id']])
+            cur.execute(query, [user_id])
             vip_detail['Time remaining'] = cur.fetchone()[0]
 
         with connection.cursor() as cur:
@@ -121,7 +112,7 @@ def get_vip_detail(request):
                         AND transaction_timestamp >= DATE_FORMAT(TIMESTAMPADD(MONTH,-1,CURRENT_TIMESTAMP), '%%Y-%%m-01 00:00:00')
                 );
             '''
-            cur.execute(fetch_query, [payload['user_id']])
+            cur.execute(fetch_query, [user_id])
             carts = cur.fetchall()
 
             total_bonus = 0
@@ -130,7 +121,7 @@ def get_vip_detail(request):
                     CALL calculate_cart_price(%s, %s, %s, @total_purchase);
                     SELECT @total_purchase;
                 '''
-                cur.execute(call_query, [payload['user_id'], cart_number, locked_number])
+                cur.execute(call_query, [user_id, cart_number, locked_number])
                 result = cur.fetchone()
                 if result:
                     total_bonus += result[0]
@@ -144,11 +135,7 @@ def get_vip_detail(request):
 def get_discount_detail(request):
     if request.method == 'GET':
         discount_detail = {}
-        try:
-            payload = validate_jwt(request)
-        except ValueError as e:
-            js = json.loads(e.__str__())
-            return JsonResponse({"error" : js['error']}, status=js['status'])
+        user_id = request.data
         
         with connection.cursor() as cur:
             query = '''
@@ -164,7 +151,7 @@ def get_discount_detail(request):
                 SELECT COUNT(*) FROM Referrals;
             '''
 
-            cur.execute(query, [payload['user_id']])
+            cur.execute(query, [user_id])
             result = cur.fetchone()
         discount_detail['Gift codes'] = result[0] if result else 0
 
@@ -175,7 +162,7 @@ def get_discount_detail(request):
                 WHERE pc.id = %s AND dc.expiration_date >= CURRENT_TIMESTAMP AND dc.expiration_date < CURRENT_TIMESTAMP + INTERVAL 7 DAY;
             '''
 
-            cur.execute(query, [payload['user_id']])
+            cur.execute(query, [user_id])
             colnames = [item[0] for item in cur.description]
             result = cur.fetchall()
 
