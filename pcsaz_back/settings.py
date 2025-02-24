@@ -56,7 +56,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'pcsaz_back.middleware.JWTAuthentication'
+    'pcsaz_back.middleware.JWTAuthentication',
+    'pcsaz_back.middleware.signup_checkdata'
 ]
 
 ROOT_URLCONF = 'pcsaz_back.urls'

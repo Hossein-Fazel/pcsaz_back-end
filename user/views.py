@@ -1,7 +1,9 @@
 from django.db import connection
 from django.http import JsonResponse
+from pcsaz_back.settings import JWT_SECRET_KEY
 import jwt
 import json
+
 
 def login(request):
     if request.method == 'POST':
@@ -22,11 +24,35 @@ def login(request):
             'user_id': user[0]
         }
 
-        token = jwt.encode(payload, 'hosseinFazeljwt', algorithm='HS256')
+        token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
         return JsonResponse({'jwt' : token, 'message' : 'Login was successful'}, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+def signup(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        firstname = data['first_name']
+        lastname = data['last_name']
+        phone = data['phone']
+        referral_code = data.get('referral_code')
+
+        with connection.cursor() as cursor:
+            cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code) VALUES (%s, %s, %s, %s);",
+                           [firstname, lastname, phone, f"{firstname}_{phone}"])
+
+        if referral_code:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT id FROM client WHERE referral_code = %s;", [referral_code])
+                r_id = cursor.fetchone()[0]
+                cursor.execute("SELECT id FROM client WHERE phone_number = %s;", [phone])
+                u_id = cursor.fetchone()[0]
+    
+                cursor.execute("INSERT INTO refer(referee, referrer) VALUES(%s, %s);", [u_id, r_id])
+
+        return JsonResponse({'message' : 'Signup was successful'}, status=200)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 def get_personal(request):
     if request.method == 'GET':
