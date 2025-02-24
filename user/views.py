@@ -1,6 +1,7 @@
 from django.db import connection
 from django.http import JsonResponse
 from pcsaz_back.settings import JWT_SECRET_KEY
+from datetime import datetime, timedelta, timezone
 import jwt
 import json
 
@@ -21,7 +22,8 @@ def login(request):
             return JsonResponse({'error': 'Invalid phone number!'}, status=401)
         
         payload = {
-            'user_id': user[0]
+            'user_id': user[0],
+            'exp' : datetime.now(timezone.utc) + timedelta(hours=12)
         }
 
         token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
