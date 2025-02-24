@@ -147,9 +147,9 @@ def get_vip_detail(request):
             for cart_number, locked_number in carts:
                 call_query = '''
                     CALL calculate_cart_price(%s, %s, %s, @total_purchase);
-                    SELECT @total_purchase;
                 '''
                 cur.execute(call_query, [user_id, cart_number, locked_number])
+                cur.execute("SELECT @total_purchase;")
                 result = cur.fetchone()
                 if result:
                     total_bonus += result[0]
