@@ -262,3 +262,23 @@ def get_carts_detail(request):
         return JsonResponse(carts_detail, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def add_address(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        user_id = request.data
+        addresses = data["adresses"]
+
+        try:
+            with connection.cursor() as cursor:
+                query='''
+                    INSERT INTO address(id, province, remainder) VALUES(%s, %s, %s);
+                '''
+                for address in addresses:
+                    cursor.execute(query, [user_id, address["province"], address["remainder"]])
+        except:
+            return JsonResponse({'message' : 'Addresses already exist'}, status=409)
+
+        return JsonResponse({'message' : 'Addresses added successfully'}, status=200)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

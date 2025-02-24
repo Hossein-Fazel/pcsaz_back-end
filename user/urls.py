@@ -7,5 +7,6 @@ urlpatterns = [
     path('vip_detail/', get_vip_detail, name='vip_detail'),
     path('discount_detail/', get_discount_detail, name='discount_detail'),
     path('carts_detail/', get_carts_detail, name='carts_status'),
-    path('signup/', signup, name='signup')
+    path('signup/', signup, name='signup'),
+    path('add_addresses/', add_address, name="add_address")
 ]
