@@ -20,8 +20,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&ik3jf@rlf@76#8l)grs9o_rvs1ons3z$*$s0aatbe480$r@p8'
+try:
+    with open('config.json', 'r') as jfile:
+        configs = load(jfile)
+        db_config = configs['db_config']
+        SECRET_KEY = configs['SECRET_KEY']
+        JWT_SECRET_KEY = configs['JWT_SECRET_KEY']
+
+except:
+    raise ValueError("The config file for database not found")
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -74,13 +82,6 @@ WSGI_APPLICATION = 'pcsaz_back.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-try:
-    with open('./db_config.json', 'r') as jfile:
-        db_config = load(jfile)
-
-except:
-    raise ValueError("The config file for database not found")
 
 
 DATABASES = {
