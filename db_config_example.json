@@ -1,13 +1,8 @@
 {
-    "db_config" : {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "your_database_name",
-        "USER": "your_database_user",
-        "PASSWORD": "your_database_password",
-        "HOST": "localhost",
-        "PORT": "3306"
-    },
-
-    "JWT_SECRET_KEY" : "your jwt secret key",
-    "SECRET_KEY" : "your django secret key"
+    "ENGINE": "django.db.backends.mysql",
+    "NAME": "your_database_name",
+    "USER": "your_database_user",
+    "PASSWORD": "your_database_password",
+    "HOST": "localhost",
+    "PORT": "3306"
 }

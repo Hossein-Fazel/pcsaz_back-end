@@ -1,7 +1,9 @@
 # myapp/middleware.py
 from django.http import JsonResponse
 import jwt
-from pcsaz_back.settings import JWT_SECRET_KEY
+from pprint import pprint
+
+SECRET_KEY = 'hosseinFazeljwt'
 
 class JWTAuthentication:
     def __init__(self, get_response):
@@ -16,7 +18,7 @@ class JWTAuthentication:
             return JsonResponse({'error': "Jwt is required!"}, status=401)
 
         try:
-            payload = jwt.decode(token, JWT_SECRET_KEY , algorithms=['HS256'])
+            payload = jwt.decode(token, SECRET_KEY , algorithms=['HS256'])
         except jwt.ExpiredSignatureError:
             return JsonResponse({'error': 'Token has expired'}, status=401)
         except jwt.InvalidTokenError:
