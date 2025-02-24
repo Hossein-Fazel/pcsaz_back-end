@@ -171,3 +171,66 @@ def get_discount_detail(request):
         return JsonResponse(discount_detail, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+def get_carts_detail(request):
+    if request.method == 'GET':
+        carts_detail = {}
+        user_id = request.data
+        
+        with connection.cursor() as cur:
+            query = '''
+                SELECT cart_number, cart_status
+                FROM shopping_cart
+                WHERE id = %s
+            '''
+
+            cur.execute(query, [user_id])
+            colnames = [item[0] for item in cur.description]
+            result = cur.fetchall()
+
+        carts_detail['carts_status'] = [dict(zip(colnames, item)) for item in result] 
+
+        recent_shopps = []
+        with connection.cursor() as cur:
+            query = '''
+                SELECT isu.cart_number, isu.locked_number
+                FROM issued_for isu
+                JOIN transaction trs ON isu.tracking_code = trs.tracking_code
+                WHERE isu.id = %s AND trs.transaction_status = "Successful"
+                ORDER BY trs.transaction_timestamp DESC
+                LIMIT 5;
+            '''
+            cur.execute(query, [user_id])
+            result = cur.fetchall()
+
+            for cart_number, locked_number in result:
+                products_query = '''
+                    SELECT category, brand, model
+                    FROM added_to adt
+                    JOIN product pdt ON adt.product_id = pdt.id
+                    WHERE adt.id = %s AND adt.cart_number = %s AND adt.locked_number = %s
+                '''
+                cur.execute(products_query, [user_id, cart_number, locked_number])
+                res2 = cur.fetchall()
+                colnames = ["category", "brand", "model"]
+                products = [dict(zip(colnames, item)) for item in res2]
+
+                price_query = '''
+                    CALL calculate_cart_price(%s, %s, %s, @total_purchase);
+                '''
+                cur.execute(price_query, [user_id, cart_number, locked_number])
+                cur.execute("SELECT @total_purchase;")
+                res2 = cur.fetchone()
+
+                recent_shopps.append(
+                    {
+                        "cart_number" : cart_number,
+                        "locked_number" : locked_number,
+                        "products" : products,
+                        "total_price" : res2[0]
+                    }
+                )
+        carts_detail['recent_shops'] = recent_shopps
+        return JsonResponse(carts_detail, status=200)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
