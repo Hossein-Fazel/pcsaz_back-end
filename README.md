@@ -13,3 +13,7 @@ pip install -r requirements.txt
 ```bash
 python manage.py runserver
 ```
+This command runs your server on the address 127.0.0.1 and port 8000. If you want to change it, you can use the command below (replace the address and port with the ones you want):
+```bash
+python manage.py runserver address:port
+```
