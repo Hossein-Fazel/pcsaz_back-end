@@ -2,24 +2,30 @@ from django.db import connection
 from django.http import JsonResponse
 from pcsaz_back.settings import JWT_SECRET_KEY
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 import jwt
 import json
 
+def hash_pass(password:str):
+    myhash = sha256()
+    myhash.update(password.encode("utf-8"))
+    return myhash.hexdigest()
 
 def login(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            phone = data.get('phone')
+            phone = data['phone']
+            password = data['password']
         except:
-            return JsonResponse({'error': 'Phone number is required!'}, status=400)
+            return JsonResponse({'error': 'Login data is missing or is not enough'}, status=400)
 
         with connection.cursor() as cursor:
-            cursor.execute("SELECT id FROM client WHERE phone_number = %s", [phone])
+            cursor.execute("SELECT id FROM client WHERE phone_number = %s AND password = %s", [phone, hash_pass(password)])
             user = cursor.fetchone()
 
         if not user:
-            return JsonResponse({'error': 'Invalid phone number!'}, status=401)
+            return JsonResponse({'error': 'The phone number or password is incorrect'}, status=401)
         
         payload = {
             'user_id': user[0],
