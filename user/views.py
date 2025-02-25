@@ -43,15 +43,16 @@ def signup(request):
         firstname = data['first_name']
         lastname = data['last_name']
         phone = data['phone']
-        referral_code = data.get('referral_code')
+        referrer_code = data.get('referrer_code')
+        password = data['password']
 
         with connection.cursor() as cursor:
-            cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code) VALUES (%s, %s, %s, %s);",
-                           [firstname, lastname, phone, f"{firstname}_{phone}"])
+            cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code, password) VALUES (%s, %s, %s, %s, %s);",
+                           [firstname, lastname, phone, f"{firstname}_{phone}", hash_pass(password)])
 
-        if referral_code:
+        if referrer_code:
             with connection.cursor() as cursor:
-                cursor.execute("SELECT id FROM client WHERE referral_code = %s;", [referral_code])
+                cursor.execute("SELECT id FROM client WHERE referral_code = %s;", [referrer_code])
                 r_id = cursor.fetchone()[0]
                 cursor.execute("SELECT id FROM client WHERE phone_number = %s;", [phone])
                 u_id = cursor.fetchone()[0]

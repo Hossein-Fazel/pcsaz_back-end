@@ -43,6 +43,7 @@ class signup_checkdata:
                 data['first_name']
                 data['last_name']
                 phone = data['phone']
+                password = data['password']
             except:
                 return JsonResponse({'error': 'Signup data is required!'}, status=400)
             
@@ -51,9 +52,9 @@ class signup_checkdata:
                 if cursor.fetchone():
                     return JsonResponse({'error': 'The phone number is already registered'}, status=409)
                 
-                referral_code = data.get('referral_code')
-                if referral_code:
-                    cursor.execute("SELECT * FROM client WHERE referral_code = %s", [referral_code])
+                referrer_code = data.get('referrer_code')
+                if referrer_code:
+                    cursor.execute("SELECT * FROM client WHERE referral_code = %s", [referrer_code])
                     if not cursor.fetchone():
                         return JsonResponse({'error': 'The referral code does not exist'}, status=400)
         
