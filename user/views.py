@@ -1,4 +1,4 @@
-from django.db import connection
+from django.db import connection, IntegrityError
 from django.http import JsonResponse
 from pcsaz_back.settings import JWT_SECRET_KEY
 from datetime import datetime, timedelta, timezone
@@ -45,10 +45,13 @@ def signup(request):
         phone = data['phone']
         referrer_code = data.get('referrer_code')
         password = data['password']
-
-        with connection.cursor() as cursor:
-            cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code, password) VALUES (%s, %s, %s, %s, %s);",
-                           [firstname, lastname, phone, f"{firstname}_{phone}", hash_pass(password)])
+        
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code, password) VALUES (%s, %s, %s, %s, %s);",
+                            [firstname, lastname, phone, f"{firstname}_{phone}", hash_pass(password)])
+        except IntegrityError as e:
+            return JsonResponse({'error' : e.__str__()[8:len(e.__str__())-2]}, status= 409)
 
         if referrer_code:
             with connection.cursor() as cursor:
