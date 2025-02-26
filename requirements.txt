@@ -1,2 +1,3 @@
 django
 pyjwt
+django-cors-headers
