@@ -1,6 +1,6 @@
 from pcsaz_back.settings import JWT_SECRET_KEY
-from django.db import connection
 from django.http import JsonResponse
+from pcsaz_back.services import validate_referral_code
 import jwt
 import json
 
@@ -46,12 +46,12 @@ class signup_checkdata:
                 data['password']
             except:
                 return JsonResponse({'error': 'Signup data is required!'}, status=400)
-            
-            with connection.cursor() as cursor:
-                referrer_code = data.get('referrer_code')
-                if referrer_code:
-                    cursor.execute("SELECT * FROM client WHERE referral_code = %s", [referrer_code])
-                    if not cursor.fetchone():
-                        return JsonResponse({'error': 'The referral code does not exist'}, status=400)
         
+            rcode = data.get('referrer_code')
+            if rcode:
+                try:
+                    validate_referral_code(rcode)
+                except ValueError as e:
+                    return JsonResponse({'error': e.__str__()}, status=400)
+
         return self.get_response(request)

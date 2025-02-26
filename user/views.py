@@ -1,15 +1,11 @@
-from django.db import connection, IntegrityError
+from django.db import Error
 from django.http import JsonResponse
 from pcsaz_back.settings import JWT_SECRET_KEY
 from datetime import datetime, timedelta, timezone
-from hashlib import sha256
+from user import services
 import jwt
 import json
 
-def hash_pass(password:str):
-    myhash = sha256()
-    myhash.update(password.encode("utf-8"))
-    return myhash.hexdigest()
 
 def login(request):
     if request.method == 'POST':
@@ -20,9 +16,7 @@ def login(request):
         except:
             return JsonResponse({'error': 'Login data is missing or is not enough'}, status=400)
 
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT id FROM client WHERE phone_number = %s AND password = %s", [phone, hash_pass(password)])
-            user = cursor.fetchone()
+        user = services.get_user(phone, password)
 
         if not user:
             return JsonResponse({'error': 'The phone number or password is incorrect'}, status=401)
@@ -37,6 +31,7 @@ def login(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+
 def signup(request):
     if request.method == 'POST':
         data = json.loads(request.body)
@@ -47,124 +42,56 @@ def signup(request):
         password = data['password']
         
         try:
-            with connection.cursor() as cursor:
-                cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code, password) VALUES (%s, %s, %s, %s, %s);",
-                            [firstname, lastname, phone, f"{firstname}_{phone}", hash_pass(password)])
-        except IntegrityError as e:
+            services.insert_client(firstname, lastname, phone, password)
+        except Error as e:
             return JsonResponse({'error' : e.__str__()[8:len(e.__str__())-2]}, status= 409)
 
         if referrer_code:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT id FROM client WHERE referral_code = %s;", [referrer_code])
-                r_id = cursor.fetchone()[0]
-                cursor.execute("SELECT id FROM client WHERE phone_number = %s;", [phone])
-                u_id = cursor.fetchone()[0]
-    
-                cursor.execute("INSERT INTO refer(referee, referrer) VALUES(%s, %s);", [u_id, r_id])
+            services.insert_refer(referrer_code, phone)
 
         return JsonResponse({'message' : 'Signup was successful'}, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+
 def get_personal(request):
     if request.method == 'GET':
         user_id = request.data
 
-        # get user common data
-        with connection.cursor() as cur:
-            cur.execute("SELECT first_name, last_name, referral_code, wallet_balance, client_timestamp  FROM client WHERE id = %s", [user_id])
-            colnames = [item[0] for item in cur.description]
-            result = cur.fetchone()
-            userdata = dict(zip(colnames, result))
+        personal_data = services.common_user_data(user_id)
+        address = services.user_addresses(user_id)
+        if address:
+            personal_data['adresses'] = address
 
-        # get user addresses
-        with connection.cursor() as cur:
-            cur.execute("SELECT province, remainder FROM address WHERE id = %s", [user_id])
-            colnames = ["province", "remainder"]
-            result = cur.fetchall()
-            if result:
-                userdata['adresses'] = [dict(zip(colnames, item)) for item in result]
-        
-        # check is vip or not
-        with connection.cursor() as cursor:
-            cursor.execute(
-                '''
-                SELECT CASE
-                    WHEN EXISTS (
-                        SELECT 1 FROM vip_client
-                        WHERE id = %s AND Subscription_expiration_time > CURRENT_TIMESTAMP
-                    ) THEN 1
-                    ELSE 0
-                END AS is_vip;
-                ''', [user_id]
-            )
-            result = cursor.fetchone()
-            userdata['is_vip'] = bool(result[0]) if result else False
+        result = services.check_vip(user_id)
+        personal_data['is_vip'] = bool(result[0]) if result else False
 
         # get number of referred
-        query = '''
-            SELECT COUNT(*) AS number
-            FROM refer
-            WHERE referrer = %s
-        '''
-        with connection.cursor() as cursor:
-            cursor.execute(query, [user_id])
-            result = cursor.fetchone()
-            userdata['count of referred'] = result[0]
+        result = services.number_of_referred(user_id)
+        personal_data['count of referred'] = result[0] if result else 0
         
-        return JsonResponse(userdata, status=200)        
+        return JsonResponse(personal_data, status=200)        
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 def get_vip_detail(request):
     if request.method == 'GET':
         vip_detail = {}
         user_id = request.data
         
-        with connection.cursor() as cur:
-            query = '''
-                SELECT CONCAT(
-                    TIMESTAMPDIFF(DAY, CURRENT_TIMESTAMP, Subscription_expiration_time), 'd ',
-                    LPAD(TIMESTAMPDIFF(HOUR, CURRENT_TIMESTAMP, Subscription_expiration_time) %% 24, 2, '0'), ':',
-                    LPAD(TIMESTAMPDIFF(MINUTE, CURRENT_TIMESTAMP, Subscription_expiration_time) %% 60, 2, '0')
-                ) AS remTime
-                FROM vip_client 
-                WHERE id = %s 
-                AND Subscription_expiration_time > CURRENT_TIMESTAMP;
-            '''
-            cur.execute(query, [user_id])
-            vip_detail['Time remaining'] = cur.fetchone()[0]
+        rtime = services.vip_ramainder_time(user_id)
+        vip_detail['Time remaining'] = rtime[0]
 
-        with connection.cursor() as cur:
-            fetch_query = '''
-                SELECT lsc.cart_number, lsc.locked_number
-                FROM vip_client vip
-                JOIN locked_shopping_cart lsc ON vip.id = lsc.id
-                JOIN issued_for isu ON lsc.id = isu.id AND lsc.cart_number = isu.cart_number AND lsc.locked_number = isu.locked_number
-                WHERE vip.id = %s 
-                AND Subscription_expiration_time >= CURRENT_TIMESTAMP 
-                AND isu.tracking_code IN (
-                    SELECT tns.tracking_code 
-                    FROM transaction tns
-                    WHERE transaction_status = 'Successful'
-                        AND transaction_timestamp >= DATE_FORMAT(TIMESTAMPADD(MONTH,-1,CURRENT_TIMESTAMP), '%%Y-%%m-01 00:00:00')
-                );
-            '''
-            cur.execute(fetch_query, [user_id])
-            carts = cur.fetchall()
 
-            total_bonus = 0
-            for cart_number, locked_number in carts:
-                call_query = '''
-                    CALL calculate_cart_price(%s, %s, %s, @total_purchase);
-                '''
-                cur.execute(call_query, [user_id, cart_number, locked_number])
-                cur.execute("SELECT @total_purchase;")
-                result = cur.fetchone()
-                if result:
-                    total_bonus += result[0]
+        carts = services.monthly_purchases(user_id)
+        total_bonus = 0
+        for cart_number, locked_number in carts:
+            result = services.calculate_cart_price(user_id, cart_number, locked_number)
+            if result:
+                total_bonus += result[0]
 
-            vip_detail['bonus'] = total_bonus
+        vip_detail['bonus'] = total_bonus
         
         return JsonResponse(vip_detail, status=200)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -174,104 +101,45 @@ def get_discount_detail(request):
     if request.method == 'GET':
         discount_detail = {}
         user_id = request.data
-        
-        with connection.cursor() as cur:
-            query = '''
-                WITH RECURSIVE Referrals AS (
-                    SELECT id AS referee
-                    FROM client
-                    WHERE id = %s
-                    UNION ALL
 
-                    SELECT r.referee
-                    FROM refer r JOIN Referrals rs ON r.referrer = rs.referee
-                )
-                SELECT COUNT(*) FROM Referrals;
-            '''
-
-            cur.execute(query, [user_id])
-            result = cur.fetchone()
+        result = services.conut_gift_codes(user_id)
         discount_detail['Gift codes'] = result[0] if result else 0
 
-        with connection.cursor() as cur:
-            query = '''
-                SELECT pc.code
-                FROM private_code pc JOIN discount_code dc ON pc.code = dc.code
-                WHERE pc.id = %s AND dc.expiration_date >= CURRENT_TIMESTAMP AND dc.expiration_date < CURRENT_TIMESTAMP + INTERVAL 7 DAY;
-            '''
-
-            cur.execute(query, [user_id])
-            colnames = [item[0] for item in cur.description]
-            result = cur.fetchall()
-
-            discount_detail['discount_codes'] = [dict(zip(colnames, item)) for item in result]
+        discount_detail['discount_codes'] = services.soonexp_discount_code(user_id)
 
         return JsonResponse(discount_detail, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 def get_carts_detail(request):
     if request.method == 'GET':
         carts_detail = {}
         user_id = request.data
         
-        with connection.cursor() as cur:
-            query = '''
-                SELECT cart_number, cart_status
-                FROM shopping_cart
-                WHERE id = %s
-            '''
-
-            cur.execute(query, [user_id])
-            colnames = [item[0] for item in cur.description]
-            result = cur.fetchall()
-
-        carts_detail['carts_status'] = [dict(zip(colnames, item)) for item in result] 
+        carts_detail['carts_status'] = services.carts_status(user_id)
 
         recent_shopps = []
-        with connection.cursor() as cur:
-            query = '''
-                SELECT isu.cart_number, isu.locked_number
-                FROM issued_for isu
-                JOIN transaction trs ON isu.tracking_code = trs.tracking_code
-                WHERE isu.id = %s AND trs.transaction_status = "Successful"
-                ORDER BY trs.transaction_timestamp DESC
-                LIMIT 5;
-            '''
-            cur.execute(query, [user_id])
-            result = cur.fetchall()
 
-            for cart_number, locked_number in result:
-                products_query = '''
-                    SELECT category, brand, model
-                    FROM added_to adt
-                    JOIN product pdt ON adt.product_id = pdt.id
-                    WHERE adt.id = %s AND adt.cart_number = %s AND adt.locked_number = %s
-                '''
-                cur.execute(products_query, [user_id, cart_number, locked_number])
-                res2 = cur.fetchall()
-                colnames = ["category", "brand", "model"]
-                products = [dict(zip(colnames, item)) for item in res2]
+        result = services.recent_purchases(user_id)
 
-                price_query = '''
-                    CALL calculate_cart_price(%s, %s, %s, @total_purchase);
-                '''
-                cur.execute(price_query, [user_id, cart_number, locked_number])
-                cur.execute("SELECT @total_purchase;")
-                res2 = cur.fetchone()
+        for cart_number, locked_number in result:
+            products = services.products_of_purchase(user_id, cart_number, locked_number)
 
-                recent_shopps.append(
-                    {
-                        "cart_number" : cart_number,
-                        "locked_number" : locked_number,
-                        "products" : products,
-                        "total_price" : res2[0]
-                    }
-                )
+            res2 = services.calculate_cart_price(user_id, cart_number, locked_number)
+            recent_shopps.append(
+                {
+                    "cart_number" : cart_number,
+                    "locked_number" : locked_number,
+                    "products" : products,
+                    "total_price" : res2[0]
+                }
+            )
         carts_detail['recent_shops'] = recent_shopps
         return JsonResponse(carts_detail, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 def add_address(request):
     if request.method == 'POST':
@@ -279,15 +147,11 @@ def add_address(request):
         user_id = request.data
         addresses = data["adresses"]
 
-        try:
-            with connection.cursor() as cursor:
-                query='''
-                    INSERT INTO address(id, province, remainder) VALUES(%s, %s, %s);
-                '''
-                for address in addresses:
-                    cursor.execute(query, [user_id, address["province"], address["remainder"]])
-        except:
-            return JsonResponse({'message' : 'Addresses already exist'}, status=409)
+        for address in addresses:
+            try:
+                services.insert_address(user_id, address["province"], address["remainder"])
+            except Error as e:
+                return JsonResponse({'message' : e.__str__()[8:len(e.__str__())-2]}, status=409)
 
         return JsonResponse({'message' : 'Addresses added successfully'}, status=200)
 
