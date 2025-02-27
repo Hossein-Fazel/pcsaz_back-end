@@ -52,11 +52,11 @@ def compatible_motherboard_ssd(motherboard_id, ssd_id):
             coursor.execute("SELECT ssd_id from sm_slot_compatible_with motherboard_id = %s", (motherboard_id,))
             return coursor.fetchall()
 
-def compatible_motherboard_connector(motherboard_id, connector):
+def compatible_gpu_connector(gpu_id, connector):
     with connection.cursor() as coursor:
         if connector:
-            coursor.execute("SELECT motherboard_id from sm_slot_compatible_with connector = %s", (connector,))
+            coursor.execute("SELECT gpu_id from connector_compatible_with connector = %s", (connector,))
             return coursor.fetchall()
-        elif motherboard_id:
-            coursor.execute("SELECT connector from sm_slot_compatible_with motherboard_id = %s", (motherboard_id,))
+        elif gpu_id:
+            coursor.execute("SELECT connector from connector_compatible_with gpu_id = %s", (gpu_id,))
             return coursor.fetchall()
