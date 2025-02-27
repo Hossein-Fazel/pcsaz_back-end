@@ -9,7 +9,7 @@ class JWTAuthentication:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path in ['/user/login/', '/user/signup/']:
+        if request.path in ['/user/login/', '/user/signup/', '/sazgaryab/products/']:
             return self.get_response(request)
 
         token = request.META.get('HTTP_AUTHORIZATION')
