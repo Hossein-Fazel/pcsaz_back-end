@@ -18,7 +18,7 @@ def get_user(phone, password):
 def insert_client(first_name, last_name, phone, password):
     with connection.cursor() as cursor:
         cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code, password) VALUES (%s, %s, %s, %s, %s);",
-                    (first_name, last_name, phone, f"{first_name}_{phone}", hash_pass(password),))
+                    (first_name, last_name, phone, f"{first_name[0]}{last_name[0]}_{phone}", hash_pass(password),))
 
 
 def insert_refer(referrer_code, phone):
