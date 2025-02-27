@@ -21,12 +21,7 @@ def login(request):
         if not user:
             return JsonResponse({'error': 'The phone number or password is incorrect'}, status=401)
         
-        payload = {
-            'user_id': user[0],
-            'exp' : datetime.now(timezone.utc) + timedelta(hours=12)
-        }
-
-        token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+        token = services.generate_jwt(user[0])
         return JsonResponse({'jwt' : token, 'message' : 'Login was successful'}, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -49,7 +44,11 @@ def signup(request):
         if referrer_code:
             services.insert_refer(referrer_code, phone)
 
-        return JsonResponse({'message' : 'Signup was successful'}, status=200)
+        user = services.get_user(phone, password)
+        
+        token = services.generate_jwt(user[0])
+
+        return JsonResponse({'message' : 'Signup was successful', 'jwt' : token}, status=200)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
