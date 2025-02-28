@@ -2,6 +2,7 @@ from pcsaz_back.settings import JWT_SECRET_KEY
 from django.http import JsonResponse
 from pcsaz_back.query_services import validate_referral_code
 from pcsaz_back import auth_services
+from user import query_services
 import json
 
 class JWTAuthentication:
@@ -51,5 +52,21 @@ class signup_checkdata:
                     validate_referral_code(rcode)
                 except ValueError as e:
                     return JsonResponse({'error': e.__str__()}, status=400)
+
+        return self.get_response(request)
+
+class check_vip_middleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path in ['/user/vip_detail/']:
+            user_id = request.data
+            
+            vip_status = query_services.check_vip(user_id)
+            if vip_status[0] == 1:
+                return self.get_response(request)
+            else:
+                return JsonResponse({'error': "Your account is not vip and you can not access to this part"}, status=401)
 
         return self.get_response(request)
