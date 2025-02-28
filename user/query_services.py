@@ -134,14 +134,14 @@ def recent_purchases(uid):
 def products_of_purchase(uid, cart_number, locked_number):
     with connection.cursor() as cur:
         products_query = '''
-            SELECT category, brand, model
+            SELECT category, brand, model, adt.quantity
             FROM added_to adt
             JOIN product pdt ON adt.product_id = pdt.id
             WHERE adt.id = %s AND adt.cart_number = %s AND adt.locked_number = %s
         '''
         cur.execute(products_query, (uid, cart_number, locked_number,))
         res2 = cur.fetchall()
-        colnames = ["category", "brand", "model"]
+        colnames = ["category", "brand", "model", "quantity"]
         return [dict(zip(colnames, item)) for item in res2]
 
 
