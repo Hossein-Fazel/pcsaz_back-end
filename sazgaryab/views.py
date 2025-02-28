@@ -1,12 +1,12 @@
 from django.db import Error
 from django.http import JsonResponse
-from sazgaryab import services
+from sazgaryab import query_services
 
 
 def get_all_products(request):
     if request.method == 'GET':
         try:
-            products = services.all_products()
+            products = query_services.all_products()
         except Error as e:
             return JsonResponse({'error' : e.__str__()[8:len(e.__str__())-2]}, status=500)
         

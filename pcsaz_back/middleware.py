@@ -1,7 +1,7 @@
 from pcsaz_back.settings import JWT_SECRET_KEY
 from django.http import JsonResponse
-from pcsaz_back.services import validate_referral_code
-import jwt
+from pcsaz_back.query_services import validate_referral_code
+from pcsaz_back import auth_services
 import json
 
 class JWTAuthentication:
@@ -17,11 +17,9 @@ class JWTAuthentication:
             return JsonResponse({'error': "Jwt is required!"}, status=401)
 
         try:
-            payload = jwt.decode(token, JWT_SECRET_KEY , algorithms=['HS256'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({'error': 'Token has expired'}, status=401)
-        except jwt.InvalidTokenError:
-            return JsonResponse({'error': 'Invalid token'}, status=401)
+            payload = auth_services.decode_jwt(token)
+        except ValueError as e:
+            return JsonResponse({'error': e.__str__()}, status=401)
 
         try:
             request.META['Content-Type'] = "application/json"

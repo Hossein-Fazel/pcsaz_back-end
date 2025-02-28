@@ -1,28 +1,9 @@
 from django.db import connection
-from hashlib import sha256
-from pcsaz_back.settings import JWT_SECRET_KEY
-from datetime import datetime, timedelta, timezone
-import jwt
-
-
-def hash_pass(password):
-    myhash = sha256()
-    myhash.update(password.encode("utf-8"))
-    return myhash.hexdigest()
-
-
-def generate_jwt(uid):
-    payload = {
-        'user_id': uid,
-        'exp' : datetime.now(timezone.utc) + timedelta(hours=12)
-    }
-
-    return jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
-
+from pcsaz_back import auth_services
 
 def get_user(phone, password):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id FROM client WHERE phone_number = %s AND password = %s", (phone, hash_pass(password),))
+        cursor.execute("SELECT id FROM client WHERE phone_number = %s AND password = %s", (phone, auth_services.hash_pass(password),))
         user = cursor.fetchone()
     return user
 
@@ -30,7 +11,7 @@ def get_user(phone, password):
 def insert_client(first_name, last_name, phone, password):
     with connection.cursor() as cursor:
         cursor.execute("INSERT INTO client(first_name, last_name, phone_number, referral_code, password) VALUES (%s, %s, %s, %s, %s);",
-                    (first_name, last_name, phone, f"{first_name[0]}{last_name[0]}_{phone}", hash_pass(password),))
+                    (first_name, last_name, phone, f"{first_name[0]}{last_name[0]}_{phone}", auth_services.hash_pass(password),))
 
 
 def insert_refer(referrer_code, phone):
