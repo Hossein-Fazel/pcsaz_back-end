@@ -73,7 +73,7 @@ def check_vip(uid):
             END AS is_vip;
             ''', (uid,)
         )
-        return cursor.fetchall()
+        return cursor.fetchone()
 
 
 def number_of_referred(uid):
