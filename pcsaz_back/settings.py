@@ -34,9 +34,6 @@ except:
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-CORS_ORIGIN_ALLOW_ALL = True
-
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -58,12 +55,13 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'pcsaz_back.middleware.JWTAuthentication',
     'pcsaz_back.middleware.signup_checkdata',
-    'corsheaders.middleware.CorsMiddleware',
     'pcsaz_back.middleware.check_vip_middleware'
 ]
 
+CORS_ORIGIN_ALLOW_ALL = True
 ROOT_URLCONF = 'pcsaz_back.urls'
 
 TEMPLATES = [
