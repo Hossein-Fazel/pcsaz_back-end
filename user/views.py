@@ -65,7 +65,7 @@ def get_personal(request):
 
         # get number of referred
         result = query_services.number_of_referred(user_id)
-        personal_data['count of referred'] = result[0] if result else 0
+        personal_data['count_of_referred'] = result[0] if result else 0
         
         return JsonResponse(personal_data, status=200)        
 
@@ -100,7 +100,7 @@ def get_discount_detail(request):
         user_id = request.data
 
         result = query_services.conut_gift_codes(user_id)
-        discount_detail['Gift codes'] = result[0] if result else 0
+        discount_detail['Gift_codes'] = result[0] if result else 0
 
         discount_detail['discount_codes'] = query_services.soonexp_discount_code(user_id)
 

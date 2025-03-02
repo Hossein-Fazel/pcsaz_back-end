@@ -166,7 +166,7 @@ def conut_gift_codes(uid):
 def soonexp_discount_code(uid):
     with connection.cursor() as cur:
         query = '''
-            SELECT pc.code, dc.expiration_date
+            SELECT pc.code, dc.usage_count, dc.amount, dc.discount_limit, dc.expiration_date
             FROM private_code pc JOIN discount_code dc ON pc.code = dc.code
             WHERE pc.id = %s AND dc.expiration_date >= CURRENT_TIMESTAMP AND dc.expiration_date < CURRENT_TIMESTAMP + INTERVAL 7 DAY;
         '''
