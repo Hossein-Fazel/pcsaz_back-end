@@ -72,11 +72,9 @@ def number_of_referred(uid):
 def vip_ramainder_time(uid):
     with connection.cursor() as cur:
         query = '''
-            SELECT CONCAT(
-                TIMESTAMPDIFF(DAY, CURRENT_TIMESTAMP, Subscription_expiration_time), 'd ',
-                LPAD(TIMESTAMPDIFF(HOUR, CURRENT_TIMESTAMP, Subscription_expiration_time) %% 24, 2, '0'), ':',
+            SELECT TIMESTAMPDIFF(DAY, CURRENT_TIMESTAMP, Subscription_expiration_time),
+                LPAD(TIMESTAMPDIFF(HOUR, CURRENT_TIMESTAMP, Subscription_expiration_time) %% 24, 2, '0'),
                 LPAD(TIMESTAMPDIFF(MINUTE, CURRENT_TIMESTAMP, Subscription_expiration_time) %% 60, 2, '0')
-            ) AS remTime
             FROM vip_client 
             WHERE id = %s 
             AND Subscription_expiration_time > CURRENT_TIMESTAMP;

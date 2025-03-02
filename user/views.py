@@ -78,7 +78,11 @@ def get_vip_detail(request):
         user_id = request.data
         
         rtime = query_services.vip_ramainder_time(user_id)
-        vip_detail['Time_remaining'] = rtime[0]
+        vip_detail['Time_remaining'] = {
+            "days" : rtime[0],
+            "hours" : int(rtime[1]),
+            "minutes" : int(rtime[2]),
+        }
 
 
         carts = query_services.monthly_purchases(user_id)
