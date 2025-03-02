@@ -158,7 +158,7 @@ def conut_gift_codes(uid):
                 SELECT r.referee
                 FROM refer r JOIN Referrals rs ON r.referrer = rs.referee
             )
-            SELECT COUNT(*) FROM Referrals;
+            SELECT COUNT(*) - 1 FROM Referrals;
         '''
         cur.execute(query, (uid,))
         return cur.fetchone()
