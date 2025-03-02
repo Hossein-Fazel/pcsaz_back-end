@@ -86,7 +86,7 @@ def get_vip_detail(request):
         for cart_number, locked_number in carts:
             result = query_services.calculate_cart_price(user_id, cart_number, locked_number)
             if result:
-                total_bonus += result[0]
+                total_bonus += result[0] * 0.15
 
         vip_detail['bonus'] = total_bonus
         
