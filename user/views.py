@@ -120,16 +120,19 @@ def get_carts_detail(request):
 
         result = query_services.recent_purchases(user_id)
 
-        for cart_number, locked_number in result:
+        for cart_number, locked_number, ttime, tcode, ltime  in result:
             products = query_services.products_of_purchase(user_id, cart_number, locked_number)
 
             res2 = query_services.calculate_cart_price(user_id, cart_number, locked_number)
             recent_shopps.append(
                 {
+                    "tracking_code" : tcode,
                     "cart_number" : cart_number,
                     "locked_number" : locked_number,
                     "products" : products,
-                    "total_price" : res2[0]
+                    "total_price" : res2[0],
+                    "locked_timestamp" : ltime,
+                    "transaction_timestamp" : ttime
                 }
             )
         carts_detail['recent_shops'] = recent_shopps

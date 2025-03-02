@@ -121,9 +121,10 @@ def carts_status(uid):
 def recent_purchases(uid):
     with connection.cursor() as cur:
         query = '''
-            SELECT isu.cart_number, isu.locked_number
+            SELECT isu.cart_number, isu.locked_number, trs.transaction_timestamp, trs.tracking_code, lsc.locked_timestamp
             FROM issued_for isu
             JOIN transaction trs ON isu.tracking_code = trs.tracking_code
+            JOIN locked_shopping_cart lsc ON lsc.cart_number = isu.cart_number AND lsc.locked_number = isu.locked_number
             WHERE isu.id = %s AND trs.transaction_status = "Successful"
             ORDER BY trs.transaction_timestamp DESC
             LIMIT 5;
@@ -134,14 +135,14 @@ def recent_purchases(uid):
 def products_of_purchase(uid, cart_number, locked_number):
     with connection.cursor() as cur:
         products_query = '''
-            SELECT category, brand, model, adt.quantity
+            SELECT pdt.id, category, brand, model, adt.quantity, adt.cart_price
             FROM added_to adt
             JOIN product pdt ON adt.product_id = pdt.id
             WHERE adt.id = %s AND adt.cart_number = %s AND adt.locked_number = %s
         '''
         cur.execute(products_query, (uid, cart_number, locked_number,))
         res2 = cur.fetchall()
-        colnames = ["category", "brand", "model", "quantity"]
+        colnames = ["product_id","category", "brand", "model", "quantity", "cart_price"]
         return [dict(zip(colnames, item)) for item in res2]
 
 
