@@ -60,7 +60,7 @@ class check_vip_middleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path in ['/user/vip_detail/']:
+        if request.path in ['/user/vip_detail/', '/sazgaryab/find_compatibles/']:
             user_id = request.data
             
             vip_status = query_services.check_vip(user_id)
