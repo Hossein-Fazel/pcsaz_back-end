@@ -4,7 +4,6 @@ from sazgaryab import query_services
 import json
 def get_all_products(request):
     if request.method == 'GET':
-        print("t1")
         try:
             products = query_services.about_product()
         except Error as e:
