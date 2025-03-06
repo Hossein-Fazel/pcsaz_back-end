@@ -66,6 +66,7 @@ def get_personal(request):
         # get number of referred
         result = query_services.number_of_referred(user_id)
         personal_data['count_of_referred'] = result[0] if result else 0
+        personal_data['count_of_referred'] += query_services.check_is_introduced(user_id)[0]
         
         return JsonResponse(personal_data, status=200)        
 

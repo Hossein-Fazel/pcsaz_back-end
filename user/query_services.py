@@ -148,19 +148,30 @@ def conut_gift_codes(uid):
     with connection.cursor() as cur:
         query = '''
             WITH RECURSIVE Referrals AS (
-                SELECT id AS referee
-                FROM client
-                WHERE id = %s
+                SELECT referee FROM refer WHERE referrer = %s
                 UNION ALL
 
                 SELECT r.referee
                 FROM refer r JOIN Referrals rs ON r.referrer = rs.referee
             )
-            SELECT COUNT(*) - 1 FROM Referrals;
+            SELECT COUNT(*) FROM Referrals;
         '''
         cur.execute(query, (uid,))
         return cur.fetchone()
 
+def check_is_introduced(uid):
+    with connection.cursor() as cur:
+        query = '''
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1 FROM refer
+                    WHERE referee = %s
+                ) THEN 1
+                ELSE 0
+            END AS is_introduced;
+        '''
+        cur.execute(query, (uid,))
+        return cur.fetchone()
 
 def soonexp_discount_code(uid):
     with connection.cursor() as cur:
