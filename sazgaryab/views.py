@@ -1,8 +1,8 @@
 from django.db import Error
 from django.http import JsonResponse
 from sazgaryab import query_services
-from pprint import pprint
 import json
+
 def get_all_products(request):
     if request.method == 'GET':
         try:
@@ -59,11 +59,8 @@ def find_compatibles(request):
                 prs.update({"GPU" : list(item[0] for item in query_services.compatible_motherboard_gpu(motherboard_id= item["id"]))})
                 prs.update({"SSD" : list(item[0] for item in query_services.compatible_motherboard_ssd(motherboard_id= item["id"]))})
 
-                # pprint(prs)
-
                 if len(cc_products) == 0 and at_first:
                     cc_products.update(prs)
-                    # pprint(cc_products)
                     at_first = False
                 else:
                     compact_products(cc_products, prs)
@@ -100,15 +97,22 @@ def find_compatibles(request):
             
             elif item["category"] == "Power Supply":
                 prs = {"GPU" : list(item[0] for item in query_services.compatible_gpu_connector(connector_id= item["id"]))}
-                pprint(prs)
                 if len(cc_products) == 0 and at_first:
                     cc_products = prs
                     at_first = False
                 else:
                     compact_products(cc_products, prs)
 
+            elif item["category"] == "SSD":
+                prs = {"Motherboard" : list(item[0] for item in query_services.compatible_motherboard_ssd(ssd_id= item["id"]))}
+
+                if len(cc_products) == 0 and at_first:
+                    cc_products.update(prs)
+                    at_first = False
+                else:
+                    compact_products(cc_products, prs)            
+
         pr_detail = []
-        # pprint(cc_products)
         for _ , value in cc_products.items():
             for pid in value:
                 pr_detail.append(query_services.about_product(pid))
