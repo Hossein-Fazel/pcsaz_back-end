@@ -48,10 +48,10 @@ def compatible_motherboard_ssd(motherboard_id= None, ssd_id= None):
 def compatible_gpu_connector(gpu_id= None, connector_id= None):
     with connection.cursor() as cursor:
         if connector_id:
-            cursor.execute("SELECT gpu_id from connector_compatible_with WHERE connector = %s", (connector_id,))
+            cursor.execute("SELECT gpu_id from connector_compatible_with WHERE power_id = %s", (connector_id,))
             return cursor.fetchall()
         elif gpu_id:
-            cursor.execute("SELECT connector from connector_compatible_with WHERE gpu_id = %s", (gpu_id,))
+            cursor.execute("SELECT power_id from connector_compatible_with WHERE gpu_id = %s", (gpu_id,))
             return cursor.fetchall()
 
 def about_product(pid="ALL"):
