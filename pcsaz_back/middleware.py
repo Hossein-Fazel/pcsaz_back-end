@@ -44,14 +44,14 @@ class signup_checkdata:
                 data['phone']
                 data['password']
             except:
-                return JsonResponse({'error': 'Signup data is required!'}, status=400)
+                return JsonResponse({'error': 'لطفا تمامی اطلاعات را وارد کنید'}, status=400)
         
             rcode = data.get('referrer_code')
             if rcode:
                 try:
                     validate_referral_code(rcode)
                 except ValueError as e:
-                    return JsonResponse({'error': e.__str__()}, status=400)
+                    return JsonResponse({'error': "کد معرف نامعتبر"}, status=400)
 
         return self.get_response(request)
 

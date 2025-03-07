@@ -12,12 +12,12 @@ def login(request):
             phone = data['phone']
             password = data['password']
         except:
-            return JsonResponse({'error': 'Login data is missing or is not enough'}, status=400)
+            return JsonResponse({'error': 'اطلاعات وارد شده ناقص است'}, status=400)
 
         user = query_services.get_user(phone, password)
 
         if not user:
-            return JsonResponse({'error': 'The phone number or password is incorrect'}, status=401)
+            return JsonResponse({'error': 'شماره تلفن یا رمز عبور نادرست است'}, status=401)
         
         token = auth_services.generate_jwt(user[0])
         return JsonResponse({'jwt' : token, 'message' : 'Login was successful'}, status=200)
