@@ -56,6 +56,8 @@ def get_personal(request):
         user_id = request.data
 
         personal_data = query_services.common_user_data(user_id)
+        personal_data["client_timestamp"] = str(personal_data["client_timestamp"]).replace("T", " ")
+
         address = query_services.user_addresses(user_id)
         if address:
             personal_data['adresses'] = address
@@ -66,7 +68,6 @@ def get_personal(request):
         # get number of referred
         result = query_services.number_of_referred(user_id)
         personal_data['count_of_referred'] = result[0] if result else 0
-        personal_data['count_of_referred'] += query_services.check_is_introduced(user_id)[0]
         
         return JsonResponse(personal_data, status=200)        
 
@@ -106,8 +107,11 @@ def get_discount_detail(request):
 
         result = query_services.conut_gift_codes(user_id)
         discount_detail['Gift_codes'] = result[0] if result else 0
+        discount_detail["Gift_codes"] += query_services.check_is_introduced(user_id)[0]
 
         discount_detail['discount_codes'] = query_services.soonexp_discount_code(user_id)
+        for item in discount_detail['discount_codes']:
+            item["expiration_date"] = str(item["expiration_date"]).replace("T", " ")
 
         return JsonResponse(discount_detail, status=200)
 
@@ -136,8 +140,8 @@ def get_carts_detail(request):
                     "locked_number" : locked_number,
                     "products" : products,
                     "total_price" : res2[0],
-                    "locked_timestamp" : ltime,
-                    "transaction_timestamp" : ttime
+                    "locked_timestamp" : str(ltime).replace("T", " ") ,
+                    "transaction_timestamp" : str(ttime).replace("T", " ")
                 }
             )
         carts_detail['recent_shops'] = recent_shopps
